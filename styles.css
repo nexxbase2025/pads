@@ -1,0 +1,100 @@
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Barra superior */
+.topbar {
+  background: #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100px; /* casi tamaño de un pad */
+  padding: 0 20px;
+}
+
+.titulo {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.logo {
+  height: 80%;
+  max-height: 80px;
+}
+
+/* Efectos */
+.efectos {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.efecto {
+  padding: 12px 20px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #444;
+  color: #fff;
+  transition: transform 0.2s;
+}
+.efecto:hover { transform: scale(1.1); }
+
+/* Pads */
+.pads {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 20px;
+}
+
+.pad {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #111;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.pad:hover { transform: scale(1.05); }
+
+/* Burbuja instalación */
+#installPrompt {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  background: #222;
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+}
+
+#installPrompt button {
+  background: #ffcc00;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.install-hidden { display: none; }

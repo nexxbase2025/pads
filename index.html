@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dumbeltram Pads</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #222;
+      color: #ffcc00;
+      font-size: 2rem;
+      font-weight: bold;
+      padding: 20px;
+      height: 90px; /* casi como un pad */
+    }
+    header img {
+      height: 60px;
+      width: auto;
+    }
+    /* Barra de volumen general */
+    #volumeControl {
+      margin-left: 20px;
+      width: 150px;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Barra lateral efectos */
+    .effects {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 10px;
+      gap: 10px;
+      background: #1c1c1c;
+      min-width: 120px;
+    }
+    .effect-btn {
+      padding: 20px 10px;
+      background: #333;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+    .effect-btn:hover {
+      background: #ffcc00;
+      color: #000;
+    }
+
+    /* Pads */
+    .pads {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .pad {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #444;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .pad:active {
+      transform: scale(0.95);
+    }
+
+    /* Burbuja instalar app */
+    #installBanner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffcc00;
+      color: #000;
+      padding: 15px 25px;
+      font-weight: bold;
+      border-radius: 50px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span>Dumbeltram Pads</span>
+    <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="0.5" title="Volumen General" />
+    <img src="logo.png" alt="Logo" />
+  </header>
+
+  <main>
+    <div class="effects">
+      <button class="effect-btn" onclick="setEffect(1)">Efecto 1</button>
+      <button class="effect-btn" onclick="setEffect(2)">Efecto 2</button>
+      <button class="effect-btn" onclick="setEffect(3)">Efecto 3</button>
+      <button class="effect-btn" onclick="setEffect(4)">Efecto 4</button>
+      <button class="effect-btn" onclick="setEffect(5)">Efecto 5</button>
+    </div>
+
+    <div class="pads" id="padsContainer"></div>
+  </main>
+
+  <div id="installBanner">📲 Instalar App</div>
+
+  <script src="app.js"></script>
+  <script>
+    // Crear los 18 pads
+    const padsContainer = document.getElementById("padsContainer");
+    for (let i = 1; i <= 18; i++) {
+      const pad = document.createElement("div");
+      pad.className = "pad";
+      pad.innerText = i;
+      pad.onclick = () => playPad(i);
+      padsContainer.appendChild(pad);
+    }
+
+    // Colores por efecto
+    const effectColors = {
+      1: ["#ff4d4d","#4dff4d","#4d4dff","#ffff4d","#ff4dff","#4dffff"],
+      2: ["#4dff4d","#ff4d4d","#ffff4d","#4dffff","#ff4dff","#4d4dff"],
+      3: ["#4d4dff","#ff4dff","#4dffff","#ff4d4d","#4dff4d","#ffff4d"],
+      4: ["#ffff4d","#4dffff","#ff4dff","#4d4dff","#ff4d4d","#4dff4d"],
+      5: ["#4dffff","#ffff4d","#4dff4d","#ff4d4d","#ff4dff","#4d4dff"]
+    };
+
+    function setEffect(effect) {
+      const pads = document.querySelectorAll(".pad");
+      pads.forEach((pad, index) => {
+        const color = effectColors[effect][index % effectColors[effect].length];
+        pad.style.background = color;
+      });
+    }
+
+    // Simulación de play
+    function playPad(i) {
+      alert("Pad " + i + " presionado");
+    }
+
+    // Burbuja instalar app
+    let deferredPrompt;
+    const installBanner = document.getElementById("installBanner");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBanner.style.display = "block";
+    });
+
+    installBanner.addEventListener("click", async () => {
+      installBanner.style.display = "none";
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          deferredPrompt = null;
+        }
+      }
+    });
+
+    window.addEventListener("appinstalled", () => {
+      installBanner.style.display = "none";
+      deferredPrompt = null;
+    });
+  </script>
+</body>
+</html>
