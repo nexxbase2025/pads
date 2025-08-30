@@ -226,3 +226,19 @@ function resetPads(){
     alert("✅ Todos los sonidos locales fueron borrados.");
   }
 }
+
+// ====================== BURBUJAS DE EFECTOS ACTIVAS ====================== //
+const effectBubbles = document.querySelectorAll(".effectBubble");
+
+effectBubbles.forEach(bubble => {
+  bubble.addEventListener("click", () => {
+    const effectNumber = parseInt(bubble.dataset.effect);
+
+    // Cambiar tanda de pads
+    setEffect(effectNumber);
+
+    // Actualizar la burbuja activa
+    effectBubbles.forEach(b => b.classList.remove("active"));
+    bubble.classList.add("active");
+  });
+});
