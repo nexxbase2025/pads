@@ -13,12 +13,13 @@ let globalVolume = 0.5; // volumen inicial al 50%
 let audioPlayers = {}; // formato: audioPlayers[efecto][pad] = Audio()
 let padStates = {};    // formato: padStates[efecto][pad] = "stopped"/"playing"/"paused"
 let localAudios = {};  // formato: localAudios[efecto][pad] = base64 o path
+let padLabels = {};    // ⭐️ Nuevo: nombre visible del pad por efecto y pad
 
 for (let i = 1; i <= totalPads; i++) {
   const pad = document.createElement("div");
   pad.className = "pad";
   pad.dataset.index = i;
-  pad.innerText = i; // se actualizará al cambiar efecto
+  pad.innerText = i; // numeración siempre
   pad.addEventListener("click", () => playPad(i));
 
   // 🔹 INPUT para subir audio local
@@ -65,15 +66,19 @@ function setEffect(effectNumber){
   if(!audioPlayers[currentEffect]) audioPlayers[currentEffect] = {};
   if(!padStates[currentEffect]) padStates[currentEffect] = {};
   if(!localAudios[currentEffect]) localAudios[currentEffect] = {};
+  if(!padLabels[currentEffect]) padLabels[currentEffect] = {};
 
   const shuffled = shuffle(baseColors);
   pads.forEach((pad,i)=>{
     pad.style.background = shuffled[i%shuffled.length];
-    const audioSrc = allPadAudios[effectNumber-1][i];
-    if(audioSrc){
-      pad.firstChild.textContent = audioSrc.includes(".mp3") ? audioSrc.split("/").pop().replace(".mp3","") : audioSrc;
+    
+    // Mostrar el nombre guardado en padLabels si existe, sino el nombre del audio por defecto
+    if(padLabels[currentEffect][i+1]){
+      pad.firstChild.textContent = padLabels[currentEffect][i+1];
     } else {
-      pad.firstChild.textContent = "";
+      const audioSrc = allPadAudios[effectNumber-1][i];
+      pad.firstChild.textContent = audioSrc.includes(".mp3") ? audioSrc.split("/").pop().replace(".mp3","") : audioSrc;
+      padLabels[currentEffect][i+1] = pad.firstChild.textContent;
     }
   });
 
@@ -140,7 +145,11 @@ function loadLocalPad(e, index){
       if(!localAudios[currentEffect]) localAudios[currentEffect] = {};
       localAudios[currentEffect][index] = ev.target.result;
 
-      pads[index-1].firstChild.textContent = file.name.replace(".mp3","");
+      // 🔹 Guardar nombre visible en padLabels
+      if(!padLabels[currentEffect]) padLabels[currentEffect] = {};
+      padLabels[currentEffect][index] = file.name.replace(".mp3","");
+
+      pads[index-1].firstChild.textContent = padLabels[currentEffect][index];
 
       // 🔹 Reemplazar audio anterior sin reproducir
       if(audioPlayers[currentEffect] && audioPlayers[currentEffect][index]){
@@ -221,24 +230,13 @@ function resetPads(){
           delete padStates[e][i];
         }
       }
+      if(padLabels[e]){
+        for(let i=1;i<=totalPads;i++){
+          delete padLabels[e][i];
+        }
+      }
     }
     pads.forEach((pad,i)=>pad.firstChild.textContent=i+1);
     alert("✅ Todos los sonidos locales fueron borrados.");
   }
 }
-
-// ====================== BURBUJAS DE EFECTOS ACTIVAS ====================== //
-const effectBubbles = document.querySelectorAll(".effectBubble");
-
-effectBubbles.forEach(bubble => {
-  bubble.addEventListener("click", () => {
-    const effectNumber = parseInt(bubble.dataset.effect);
-
-    // Cambiar tanda de pads
-    setEffect(effectNumber);
-
-    // Actualizar la burbuja activa
-    effectBubbles.forEach(b => b.classList.remove("active"));
-    bubble.classList.add("active");
-  });
-});
