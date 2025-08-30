@@ -6,11 +6,13 @@ const baseColors = ["#ff4d4d","#4dff4d","#4d4dff","#ffff4d","#ff4dff","#4dffff"]
 
 let pads = [];
 let currentAudio = null; // audio que se está reproduciendo actualmente
+let currentPadIndex = null; // pad que se está reproduciendo actualmente
 let globalVolume = 0.5; // volumen inicial al 50%
 
-// ⭐️ Guardar audios y estado por pad
-let audioPlayers = {};
-let padStates = {}; // "stopped", "playing", "paused"
+// ⭐️ Guardar audios y estado por pad y efecto
+let audioPlayers = {}; // formato: audioPlayers[efecto][pad] = Audio()
+let padStates = {};    // formato: padStates[efecto][pad] = "stopped"/"playing"/"paused"
+let localAudios = {};  // formato: localAudios[efecto][pad] = base64 o path
 
 for (let i = 1; i <= totalPads; i++) {
   const pad = document.createElement("div");
@@ -19,14 +21,17 @@ for (let i = 1; i <= totalPads; i++) {
   pad.innerText = i; // se actualizará al cambiar efecto
   pad.addEventListener("click", () => playPad(i));
 
+  // 🔹 INPUT para subir audio local
   const inputFile = document.createElement("input");
   inputFile.type = "file";
   inputFile.accept = "audio/*";
   inputFile.style.display = "none";
+
+  // 🔹 Doble clic abre selector de archivo
+  pad.addEventListener("dblclick", () => inputFile.click());
+
   inputFile.addEventListener("change", (e) => loadLocalPad(e, i));
   pad.appendChild(inputFile);
-
-  pad.addEventListener("dblclick", () => inputFile.click());
 
   padsContainer.appendChild(pad);
   pads.push(pad);
@@ -55,6 +60,12 @@ function shuffle(array){
 
 function setEffect(effectNumber){
   currentEffect = effectNumber;
+
+  // Inicializar estructuras si no existen
+  if(!audioPlayers[currentEffect]) audioPlayers[currentEffect] = {};
+  if(!padStates[currentEffect]) padStates[currentEffect] = {};
+  if(!localAudios[currentEffect]) localAudios[currentEffect] = {};
+
   const shuffled = shuffle(baseColors);
   pads.forEach((pad,i)=>{
     pad.style.background = shuffled[i%shuffled.length];
@@ -66,51 +77,57 @@ function setEffect(effectNumber){
     }
   });
 
+  // Pausar cualquier audio activo al cambiar efecto
   if(currentAudio){
     currentAudio.pause();
     currentAudio.currentTime = 0;
     currentAudio = null;
+    currentPadIndex = null;
   }
 }
 
-// ====================== FUNCION PLAYPAD ADAPTADA ====================== //
+// ====================== FUNCION PLAYPAD CON PAUSA GLOBAL ====================== //
 function playPad(index){
   const pad = pads[index-1];
 
   // Obtener audio local o del efecto actual
-  let src = localStorage.getItem("pad_" + index);
-  if(!src && currentEffect > 0){
-    src = allPadAudios[currentEffect-1][index-1];
-  }
+  let src = (localAudios[currentEffect] && localAudios[currentEffect][index]) || allPadAudios[currentEffect-1][index-1];
   if(!src) return;
 
   // Inicializar audio si no existe
-  if(!audioPlayers[index]){
-    audioPlayers[index] = new Audio(src);
-    audioPlayers[index].volume = globalVolume;
-    padStates[index] = "stopped";
+  if(!audioPlayers[currentEffect][index]){
+    audioPlayers[currentEffect][index] = new Audio(src);
+    audioPlayers[currentEffect][index].volume = globalVolume;
+    padStates[currentEffect][index] = "stopped";
   }
 
-  const player = audioPlayers[index];
-  const state = padStates[index];
+  // 🔹 Pausar cualquier otro pad que esté reproduciéndose
+  if(currentAudio && currentPadIndex !== index){
+    currentAudio.pause();
+    if(padStates[currentEffect][currentPadIndex]) padStates[currentEffect][currentPadIndex] = "paused";
+  }
+
+  const player = audioPlayers[currentEffect][index];
+  const state = padStates[currentEffect][index];
 
   if(state === "stopped"){
     // Primer clic: reproducir desde inicio
     player.currentTime = 0;
     player.play();
-    padStates[index] = "playing";
+    padStates[currentEffect][index] = "playing";
   } else if(state === "playing"){
     // Segundo clic: pausar
     player.pause();
-    padStates[index] = "paused";
+    padStates[currentEffect][index] = "paused";
   } else if(state === "paused"){
     // Tercer clic: reproducir desde inicio
     player.currentTime = 0;
     player.play();
-    padStates[index] = "playing";
+    padStates[currentEffect][index] = "playing";
   }
 
   currentAudio = player;
+  currentPadIndex = index;
 }
 
 // ⭐️ Cargar sonido local en un Pad
@@ -119,11 +136,23 @@ function loadLocalPad(e, index){
   if(file){
     const reader = new FileReader();
     reader.onload = (ev) => {
-      localStorage.setItem("pad_" + index, ev.target.result);
+      // 🔹 Guardar audio local por efecto
+      if(!localAudios[currentEffect]) localAudios[currentEffect] = {};
+      localAudios[currentEffect][index] = ev.target.result;
+
       pads[index-1].firstChild.textContent = file.name.replace(".mp3","");
-      audioPlayers[index] = new Audio(ev.target.result); // inicializar toggle con el nuevo audio
-      audioPlayers[index].volume = globalVolume;
-      padStates[index] = "stopped"; // reiniciar estado al cargar nuevo audio
+
+      // 🔹 Reemplazar audio anterior sin reproducir
+      if(audioPlayers[currentEffect] && audioPlayers[currentEffect][index]){
+        audioPlayers[currentEffect][index].pause();
+        audioPlayers[currentEffect][index] = null;
+      }
+
+      if(!audioPlayers[currentEffect]) audioPlayers[currentEffect] = {};
+      audioPlayers[currentEffect][index] = new Audio(ev.target.result);
+      audioPlayers[currentEffect][index].volume = globalVolume;
+      if(!padStates[currentEffect]) padStates[currentEffect] = {};
+      padStates[currentEffect][index] = "stopped"; // reiniciar estado al cargar nuevo audio
     };
     reader.readAsDataURL(file);
   }
@@ -134,7 +163,9 @@ const volumeControl = document.getElementById("volumeControl");
 volumeControl.value = globalVolume;
 volumeControl.addEventListener("input",()=>{
   globalVolume = parseFloat(volumeControl.value);
-  Object.values(audioPlayers).forEach(p => p.volume = globalVolume);
+  Object.values(audioPlayers).forEach(eff=>{
+    Object.values(eff).forEach(p => p.volume = globalVolume);
+  });
   if(currentAudio) currentAudio.volume = globalVolume;
 });
 
@@ -171,12 +202,27 @@ if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
 // ⭐️ Resetear todos los Pads locales
 function resetPads(){
   if(confirm("¿Seguro que quieres borrar todos los sonidos cargados manualmente?")){
-    for(let i=1; i<=totalPads; i++){
-      localStorage.removeItem("pad_" + i);
-      pads[i-1].firstChild.textContent = i; // restaurar número
-      delete audioPlayers[i];
-      delete padStates[i];
+    for(let e=1;e<=allPadAudios.length;e++){
+      if(localAudios[e]){
+        for(let i=1;i<=totalPads;i++){
+          delete localAudios[e][i];
+        }
+      }
+      if(audioPlayers[e]){
+        for(let i=1;i<=totalPads;i++){
+          if(audioPlayers[e][i]){
+            audioPlayers[e][i].pause();
+            audioPlayers[e][i] = null;
+          }
+        }
+      }
+      if(padStates[e]){
+        for(let i=1;i<=totalPads;i++){
+          delete padStates[e][i];
+        }
+      }
     }
+    pads.forEach((pad,i)=>pad.firstChild.textContent=i+1);
     alert("✅ Todos los sonidos locales fueron borrados.");
   }
 }
